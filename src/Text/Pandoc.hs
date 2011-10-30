@@ -69,6 +69,7 @@ module Text.Pandoc
                , readHtml
                , readTextile
                , readNative
+               , readRD
                -- * Parser state used in readers
                , ParserState (..)
                , defaultParserState
@@ -119,6 +120,7 @@ import Text.Pandoc.Readers.LaTeX
 import Text.Pandoc.Readers.HTML
 import Text.Pandoc.Readers.Textile
 import Text.Pandoc.Readers.Native
+import Text.Pandoc.Readers.RD
 import Text.Pandoc.Writers.Native
 import Text.Pandoc.Writers.Markdown
 import Text.Pandoc.Writers.RST 
@@ -161,6 +163,7 @@ readers = [("native"       , \_ -> readNative)
           ,("latex"        , readLaTeX)
           ,("latex+lhs"    , \st ->
                              readLaTeX st{ stateLiterateHaskell = True})
+          ,("rd"           , readRD)
           ]
 
 -- | Association list of formats and writers (omitting the

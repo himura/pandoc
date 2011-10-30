@@ -242,6 +242,7 @@ Library
                    Text.Pandoc.Readers.TeXMath,
                    Text.Pandoc.Readers.Textile,
                    Text.Pandoc.Readers.Native,
+                   Text.Pandoc.Readers.RD,
                    Text.Pandoc.Writers.Native,
                    Text.Pandoc.Writers.Docbook,
                    Text.Pandoc.Writers.HTML,

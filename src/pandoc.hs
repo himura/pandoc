@@ -604,6 +604,7 @@ defaultReaderName fallback (x:xs) =
     ".textile"  -> "textile"
     ".native"   -> "native"
     ".json"     -> "json"
+    ".rd"       -> "rd"
     _           -> defaultReaderName fallback xs
 
 -- Returns True if extension of first source is .lhs
