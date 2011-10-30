@@ -283,10 +283,6 @@ symbol = do
 rawStr :: GenParser Char ParserState String
 rawStr = many1 (noneOf (specialChars ++ "\t\n "))
 
--- inlineParser :: String -> String -> ([Inline] -> Inline) ->  GenParser Char ParserState Inline
--- inlineParser start end cnt =
---   enclosed (string start) (string end) cnt >>= return . inline . normalizeSpaces
-
 enclosed' :: GenParser Char st t   -- ^ start parser
           -> GenParser Char st end  -- ^ end parser
           -> GenParser Char st a    -- ^ content parser (to be used repeatedly)
@@ -294,32 +290,32 @@ enclosed' :: GenParser Char st t   -- ^ start parser
 enclosed' start end parser = try $
   start >> many1Till parser end
 
-emphasis :: GenParser Char ParserState Inline
-emphasis = enclosed' (string "((*") (string "*))") inline' >>=
-           return . Emph . normalizeSpaces
+inlineParser :: String -> String -> GenParser Char ParserState a -> GenParser Char ParserState [a]
+inlineParser beg end p = enclosed' (string beg) (string end) p
 
-code' :: String -> String -> GenParser Char ParserState Inline
-code' beg end
-  = enclosed' (string beg) (string end) (many1Till anyChar (lookAhead (string end))) >>=
-    return . Code ("",[],[]) . concat
+emphasis :: GenParser Char ParserState Inline
+emphasis = inlineParser "((*" "*))" inline' >>= return . Emph . normalizeSpaces
+
+code' :: String -> String -> GenParser Char ParserState [String]
+code' beg end = inlineParser beg end (many1Till anyChar (lookAhead (string end)))
 
 code :: GenParser Char ParserState Inline
-code = code' "(({" "}))"
+code = code' "(({" "}))" >>= return . Code ("",[],[]) . concat
 
 var :: GenParser Char ParserState Inline
-var = code' "((|" "|))"
+var = code' "((|" "|))" >>= return . Code ("",["var"],[]) . concat
 
 keyboard :: GenParser Char ParserState Inline
-keyboard = code' "((%" "%))"
+keyboard = code' "((%" "%))" >>= return . Code ("",["keyboard"],[]) . concat
 
 index :: GenParser Char ParserState Inline
-index = enclosed' (string "((:") (string ":))") inline' >>= return . Strikeout
+index = inlineParser "((:" ":))" inline' >>= return . Strikeout
 
 reference :: GenParser Char ParserState Inline
 reference = undefined
 
 footnote :: GenParser Char ParserState Inline
-footnote = enclosed' (string "((-") (string "-))") inline' >>= return . Note . (:[]) . Plain
+footnote = inlineParser "((-" "-))" inline' >>= return . Note . (:[]) . Plain
 
 verb :: GenParser Char ParserState Inline
-verb = code' "(('" "'))"
+verb = code' "(('" "'))" >>= return . Code ("",["verb"],[]) . concat
