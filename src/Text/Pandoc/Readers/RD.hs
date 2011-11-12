@@ -59,11 +59,17 @@ parseBlocks = manyTill block eof
 
 blockElems :: [GenParser Char ParserState Block]
 blockElems =
-  [ verbatim
-  , headline
-  , list
+  [ list
+  , verbatim
   , textblock
     -- , include -- FIXME
+  ]
+
+breakTextBlock :: [GenParser Char ParserState Block]
+breakTextBlock =
+  [ headline
+  , list
+  , verbatim
   ]
 
 toplevel :: GenParser Char ParserState Block
@@ -73,10 +79,17 @@ block :: GenParser Char ParserState Block
 block = choice blockElems <?> "block"
 
 textblock :: GenParser Char ParserState Block
-textblock = many1 inline >>~ eatTrailingSpaces >>= return . Plain . normalizeSpaces
+textblock = try $ (textblock' >>~ skipMany blanklines) >>= return . Para . concat
+  where textblock' = do
+          result <- plain
+          option [result] $ try $ do
+            notFollowedBy blanklines
+            notFollowedBy $ choice breakTextBlock
+            result' <- textblock'
+            return $ result:[Space]:result'
 
-eatTrailingSpaces :: GenParser Char ParserState ()
-eatTrailingSpaces = skipMany1 (try (manyTill space newline))
+plain :: GenParser Char ParserState [Inline]
+plain = manyTill inline newline >>= return . normalizeSpaces
 
 verbatim :: GenParser Char ParserState Block
 verbatim = try $ do
@@ -109,13 +122,15 @@ list = choice [ itemList
 -- parses list start and returns its indent depth
 itemListStart :: GenParser Char st Int
 itemListStart = try $ do
+  white1 <- many spaceChar
   char '*'
-  white <- many1 spaceChar
-  return $ 1 + length white
+  white2 <- many1 spaceChar
+  return $ 1 + length white1 + length white2
 
 -- parses enumerator list start and returns its attributes
 enumListMarker :: GenParser Char st ListAttributes
 enumListMarker = try $ do
+  many spaceChar
   char '('
   itemNum <- many1 digit
   char ')'
@@ -203,7 +218,7 @@ itemList :: GenParser Char ParserState Block
 itemList = many1 (listItem itemListStart) >>= return . BulletList . compactify
 
 enumListStart :: GenParser Char ParserState Int
-enumListStart = do
+enumListStart = try $ do
   (_, markerLen) <- withHorizDisplacement enumListMarker
   white <- many1 spaceChar
   return $ markerLen + length white
@@ -215,10 +230,11 @@ enumList = do
   return $ OrderedList (start, style, delim) (compactify items)
 
 descListStart :: GenParser Char ParserState Int
-descListStart = do
+descListStart = try $ do
+  white1 <- many spaceChar
   char ':'
-  white <- many spaceChar
-  return $ 1 + length white
+  white2 <- many spaceChar
+  return $ 1 + length white1 + length white2
 
 descListItem :: GenParser Char ParserState ([Inline], [[Block]])
 descListItem = do
