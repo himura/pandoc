@@ -263,7 +263,7 @@ inlineElems =
   , var
   , keyboard
   , index
-    -- , reference
+  , reference
   , footnote
   , verb
   , symbol
@@ -328,7 +328,22 @@ index :: GenParser Char ParserState Inline
 index = inlineParser "((:" ":))" inline' >>= return . Strikeout
 
 reference :: GenParser Char ParserState Inline
-reference = undefined
+reference = try $ string "((<" >> refparser
+
+refparser :: GenParser Char ParserState Inline
+refparser = shortLink <|> detailLink
+  where
+    link t = try $ do
+      string "URL:"
+      l <- manyTill anyChar (string ">))")
+      return $ Link (if null t then [Str l] else t) (l, "")
+    label t = try $ do
+      l <- manyTill alphaNum (string ">))")
+      return $ Link (if null t then [Str l] else t) (l, "")
+    shortLink = link [] <|> label []
+    detailLink = do
+      title <- manyTill inline' (char '|')
+      link title <|> label title
 
 footnote :: GenParser Char ParserState Inline
 footnote = inlineParser "((-" "-))" inline' >>= return . Note . (:[]) . Plain
